@@ -10,7 +10,7 @@ from pypfopt.risk_models import CovarianceShrinkage
 from pypfopt import objective_functions
 from fredapi import Fred
 
-# Set up FRED API key
+
 fred_api_key = '4b780f2d5edc3b1810ec07fa199cc3ad'
 fred = Fred(api_key=fred_api_key)
 
@@ -20,7 +20,7 @@ def load_data(tickers, start_date, end_date):
     return data
 
 def get_risk_free_rate():
-    series_id = 'DTB3'  # 3-Month Treasury Bill
+    series_id = 'DTB3'  
     data = fred.get_series(series_id)
     return data.iloc[-1] / 100
 
@@ -33,7 +33,7 @@ def plot_efficient_frontier(tickers, start_date, end_date, risk_free_rate, bound
 
     # Maximum Sharpe Ratio Portfolio
     try:
-        ef.add_objective(objective_functions.L2_reg, gamma=0.1)  # Regularization
+        ef.add_objective(objective_functions.L2_reg, gamma=0.1)  
         ef_max_sharpe = ef.max_sharpe(risk_free_rate=risk_free_rate)
         ret_sharpe, vol_sharpe, sharpe_ratio = ef.portfolio_performance(risk_free_rate=risk_free_rate)
         weights_sharpe = ef.clean_weights()
@@ -107,7 +107,7 @@ def plot_efficient_frontier(tickers, start_date, end_date, risk_free_rate, bound
     correlation_matrix = data.pct_change().corr()
     st.write(correlation_matrix.style.background_gradient(cmap='coolwarm').format("{:.2f}"))
 
-    # Update the pie chart to reflect short positions correctly
+
     def format_weights(weights):
         return {k: (v if v >= 0 else v) for k, v in weights.items()}
 
