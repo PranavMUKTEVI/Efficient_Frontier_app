@@ -5,4 +5,8 @@ plotly==5.23.0
 pyportfolioopt==1.5.5
 fredapi==0.5.2
 scikit-learn==1.5.1
+seaborn==0.13.2
+scipy==1.14.0
+pyfredapi==0.8.0
+pandas-datareader==0.10.0
 
