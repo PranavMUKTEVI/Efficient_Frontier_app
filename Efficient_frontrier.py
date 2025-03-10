@@ -37,7 +37,7 @@ def get_risk_free_rate():
         data = fred.get_series(series_id)
         return data.iloc[-1] / 100
     except Exception as e:
-        st.warning("Failed to fetch risk-free rate from FRED. Defaulting to 2%.")
+        st.error(f"Error fetching risk-free rate: {e}")
         return 0.02  # Default to 2% if FRED fails
 
 # Plot Efficient Frontier
@@ -58,14 +58,18 @@ def plot_efficient_frontier(tickers, start_date, end_date, risk_free_rate, bound
         ef_max_sharpe = ef.max_sharpe(risk_free_rate=risk_free_rate)
         ret_sharpe, vol_sharpe, sharpe_ratio = ef.portfolio_performance(risk_free_rate=risk_free_rate)
         weights_sharpe = ef.clean_weights()
+    except Exception as e:
+        st.error(f"Error optimizing Max Sharpe Portfolio: {e}")
+        st.stop()
 
+    try:
         ef = EfficientFrontier(mu, S, weight_bounds=bounds)
         ef.add_objective(objective_functions.L2_reg, gamma=0.1)
         ef_min_vol = ef.min_volatility()
         ret_vol, vol_vol, _ = ef.portfolio_performance()
         weights_vol = ef.clean_weights()
     except Exception as e:
-        st.error(f"Error optimizing portfolios: {e}")
+        st.error(f"Error optimizing Min Volatility Portfolio: {e}")
         st.stop()
 
     fig = go.Figure()
@@ -73,15 +77,19 @@ def plot_efficient_frontier(tickers, start_date, end_date, risk_free_rate, bound
     if monte_carlo:
         n_portfolios = 5000
         results = np.zeros((3, n_portfolios))
-        weights = np.random.dirichlet(np.ones(len(tickers)), n_portfolios)
-        portfolio_returns = np.dot(weights, mu)
-        portfolio_stddevs = np.sqrt(np.diag(np.dot(weights.T, np.dot(S, weights))))
-        sharpe_ratios = (portfolio_returns - risk_free_rate) / portfolio_stddevs
+        for i in range(n_portfolios):
+            weights = np.random.dirichlet(np.ones(len(tickers)))
+            portfolio_return = np.dot(weights, mu)
+            portfolio_stddev = np.sqrt(np.dot(weights.T, np.dot(S, weights)))
+            sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_stddev
+            results[0, i] = portfolio_return
+            results[1, i] = portfolio_stddev
+            results[2, i] = sharpe_ratio
 
         fig.add_trace(go.Scatter(
-            x=portfolio_stddevs, y=portfolio_returns,
+            x=results[1, :], y=results[0, :],
             mode='markers',
-            marker=dict(color=sharpe_ratios, colorscale='Viridis', showscale=True),
+            marker=dict(color=results[2, :], colorscale='Viridis', showscale=True),
             name='Monte Carlo Portfolios'
         ))
 
@@ -129,6 +137,21 @@ if st.sidebar.button('Optimize'):
         st.error('Please enter at least one ticker.')
     else:
         plot_efficient_frontier(tickers_list, start_date, end_date, risk_free_rate, bounds, allow_short_positions, monte_carlo)
+def load_data(tickers, start_date, end_date):
+    try:
+        data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+        print(f"Retrieved Data:\n{data.head()}")  # Debugging output
+        if data.isnull().values.all():  
+            st.warning("Data contains only NaN values. Please check ticker symbols.")
+            st.stop()
+        if data.empty:
+            st.error("No valid data retrieved for the given tickers and date range.")
+            st.stop()
+        return data
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+        st.stop()
+
     
 
   
